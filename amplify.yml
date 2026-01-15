@@ -1,0 +1,26 @@
+version: 1
+applications:
+  - frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            # Make sure the file exists
+            - touch .env.production
+            # Copy only the vars you need from Amplify into .env.production
+            - env | grep '^DATABASE_URL=' >> .env.production
+            - env | grep '^AUTH_SECRET=' >> .env.production
+            - env | grep '^DEMO_ORG_ID=' >> .env.production
+            - env | grep '^NEXT_PUBLIC_' >> .env.production
+            # Build Next.js
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+    appRoot: .
