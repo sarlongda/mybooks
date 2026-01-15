@@ -1,10 +1,11 @@
 // app/api/expenses/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getActiveOrganizationId } from '@/lib/org';
 
-function getOrgId() {
-  return process.env.DEMO_ORG_ID || "demo-org";
-}
+// function getOrgId() {
+//   return process.env.DEMO_ORG_ID || "demo-org";
+// }
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,7 +14,8 @@ export async function GET(req: NextRequest) {
     const pageSize = parseInt(searchParams.get("pageSize") || "30", 10);
     const q = searchParams.get("q")?.trim() || "";
     const recurringParam = searchParams.get("recurring");
-    const organizationId = getOrgId();
+    // const organizationId = getOrgId();
+    const organizationId = await getActiveOrganizationId();
 
     const where: any = { organizationId };
 
@@ -109,7 +111,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const organizationId = getOrgId();
+    // const organizationId = getOrgId();
+    const organizationId = await getActiveOrganizationId();
 
     const expense = await prisma.expense.create({
       data: {

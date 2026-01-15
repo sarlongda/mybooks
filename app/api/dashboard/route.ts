@@ -1,10 +1,11 @@
 // app/api/dashboard/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getActiveOrganizationId } from '@/lib/org';
 
-function getOrgId() {
-  return process.env.DEFAULT_ORG_ID || "demo-org";
-}
+// function getOrgId() {
+//   return process.env.DEFAULT_ORG_ID || "demo-org";
+// }
 
 function getDateRange(period: string) {
   const endDate = new Date();
@@ -65,7 +66,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "last-30";
     const { startDate, endDate } = getDateRange(period);
-    const organizationId = getOrgId();
+    // const organizationId = getOrgId();
+    const organizationId = await getActiveOrganizationId();
     const baseCurrency = "USD"; // later: read from Organization
 
     const [openInvoices, paidInvoices, periodExpenses] = await Promise.all([

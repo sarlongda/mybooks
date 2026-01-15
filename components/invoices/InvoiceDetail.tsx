@@ -1,3 +1,4 @@
+// components/invoices/InvoiceDetail.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -189,6 +190,7 @@ export function InvoiceDetail({ invoiceId }: InvoiceDetailProps) {
 
       if (response.ok) {
         alert('Invoice sent successfully!');
+        router.push(`/invoices`);
       } else {
         const error = await response.json().catch(() => ({}));
         alert(`Failed to send invoice: ${error.error || 'Unknown error'}`);

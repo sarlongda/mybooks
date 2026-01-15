@@ -90,6 +90,8 @@ model Client {
   company        String?
   email          String?
   phone          String?
+  businessPhone  String?
+  mobilePhone    String?
 
   addressLine1   String?
   addressLine2   String?
@@ -97,6 +99,7 @@ model Client {
   state          String?
   postalCode     String?
   country        String?
+  notes          String?
 
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())

@@ -10,7 +10,7 @@ type SendInvoiceEmailPayload = {
   subject?: string;
   message?: string;
   includePdf?: boolean;
-  markAsSent?: boolean;
+  markAsSent?: boolean; // optional, defaults to true below
 };
 
 export async function POST(req: NextRequest) {
@@ -20,6 +20,7 @@ export async function POST(req: NextRequest) {
 
     const invoiceId = body.invoiceId || searchParams.get("invoiceId") || undefined;
     let toEmail = body.toEmail;
+    const markAsSent = body.markAsSent ?? true; // � default to true
 
     if (!invoiceId) {
       return NextResponse.json(
@@ -28,8 +29,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // � Only constrain by org if DEFAULT_ORG_ID is actually set
+    const where: any = { id: invoiceId };
+    if (DEFAULT_ORG_ID) {
+      where.organizationId = DEFAULT_ORG_ID;
+    }
+
     const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, organizationId: DEFAULT_ORG_ID },
+      where,
       include: { client: true, lineItems: true },
     });
 
@@ -64,6 +71,7 @@ export async function POST(req: NextRequest) {
       body.subject ||
       `Invoice ${invoice.number || invoice.id} from ${clientName}`;
 
+    // � Stub: log instead of actually sending email (you can plug real email later)
     console.log("[send-invoice-email] Would send email:", {
       invoiceId: invoice.id,
       toEmail,
@@ -72,14 +80,22 @@ export async function POST(req: NextRequest) {
       includePdf: body.includePdf,
     });
 
-    if (body.markAsSent && invoice.status === "DRAFT") {
+    let newStatus = invoice.status;
+
+    // � Mark as SENT by default if it was DRAFT
+    if (markAsSent && invoice.status === "DRAFT") {
       await prisma.invoice.update({
         where: { id: invoice.id },
         data: { status: "SENT" },
       });
+      newStatus = "SENT";
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({
+      ok: true,
+      invoiceId: invoice.id,
+      status: newStatus,
+    });
   } catch (err) {
     console.error("[send-invoice-email] error", err);
     return NextResponse.json(

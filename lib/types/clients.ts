@@ -8,6 +8,8 @@ export interface ClientListItem {
   city?: string;
   country?: string;
   outstandingBalance: number;
+  overdueBalance: number;
+  draftBalance: number;
   lastInvoiceDate?: string;
   createdAt: string;
 }
@@ -25,12 +27,15 @@ export interface Client {
   name: string;
   email?: string;
   phone?: string;
+  businessPhone?: string;
+  mobilePhone?: string;
   company_name?: string;
   contact_name?: string;
-  address?: string;
+  addressLine1?: string;
+  addressLine2?: string;
   city?: string;
   state?: string;
-  postal_code?: string;
+  postalCode?: string;
   country?: string;
   currency: string;
   notes?: string;
@@ -77,6 +82,8 @@ export interface ClientFormData {
   name: string;
   email?: string;
   phone?: string;
+  businessPhone?: string;
+  mobilePhone?: string;
   companyName?: string;
   contactName?: string;
   addressLine1?: string;

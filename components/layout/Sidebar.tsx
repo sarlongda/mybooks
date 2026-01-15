@@ -1,3 +1,4 @@
+// components/layout/Sidebar.tsx
 "use client";
 
 import {
@@ -16,6 +17,7 @@ import {
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { OrganizationSwitcher } from './OrganizationSwitcher';
 
 interface MenuItemProps {
   icon: React.ReactNode;
@@ -85,9 +87,9 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-blue-600 to-blue-700 min-h-screen flex flex-col">
+    <aside className="w-64 bg-gradient-to-b from-blue-600 to-blue-700 h-full flex flex-col">
       {/* Business selector – static for now, later we’ll hook it to real business switching */}
-      <div className="p-4 border-b border-blue-500">
+      {/* <div className="p-4 border-b border-blue-500">
         <div className="flex items-center gap-2 text-white cursor-pointer">
           <BookOpen className="w-6 h-6" />
           <div>
@@ -96,7 +98,8 @@ export function Sidebar() {
           </div>
           <ChevronDown className="w-4 h-4 ml-auto" />
         </div>
-      </div>
+      </div> */}
+      <OrganizationSwitcher />
 
       <nav className="flex-1 py-2">
         <MenuItem

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 
 const DEMO_ORG_ID = process.env.DEMO_ORG_ID;
 
-// GET /api/clients/:clientId  → used by detail + edit pages
+// GET /api/clients/:clientId → used by detail + edit pages
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ clientId: string }> }
@@ -58,18 +58,22 @@ export async function GET(
         company: client.company ?? "",
         email: client.email ?? "",
         phone: client.phone ?? "",
-        address: client.addressLine1 ?? "",
+        businessPhone: client.businessPhone ?? "",
+        mobilePhone: client.mobilePhone ?? "",
+        addressLine1: client.addressLine1 ?? "",
+        addressLine2: client.addressLine2 ?? "",
         city: client.city ?? "",
         state: client.state ?? "",
-        postal_code: client.postalCode ?? "",
+        postalCode: client.postalCode ?? "",
         country: client.country ?? "",
         currency: "USD",
+        // you don’t have notes in the DB yet, so just send empty
+        notes: client.notes ?? "",
       },
       summary: {
-        invoiceStats: {
-          openAmount,
-          overdueAmount,
-        },
+        // match what ClientDetailPage expects
+        outstandingBalance: openAmount,
+        overdueBalance: overdueAmount,
       },
       invoices: invoices.map((inv) => ({
         id: inv.id,
@@ -91,7 +95,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/clients/:clientId  → used by edit form
+// PATCH /api/clients/:clientId → used by edit form
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ clientId: string }> }
@@ -106,33 +110,38 @@ export async function PATCH(
       company,
       email,
       phone,
+      businessPhone,
+      mobilePhone,
       addressLine1,
       addressLine2,
       city,
       state,
       postalCode,
       country,
+      notes,
       isActive,
     } = body;
 
     const updated = await prisma.client.update({
       where: {
-        // id is primary key; we also enforce org in data
         id: clientId,
       },
       data: {
-        displayName,
-        company,
-        email,
-        phone,
-        addressLine1,
-        addressLine2,
-        city,
-        state,
-        postalCode,
-        country,
-        isActive: isActive ?? true,
-        organizationId: DEMO_ORG_ID,
+        displayName: displayName ?? undefined,
+        company: company ?? undefined,
+        email: email ?? undefined,
+        phone: phone ?? undefined,
+        businessPhone: businessPhone ?? undefined,
+        mobilePhone: mobilePhone ?? undefined,
+        addressLine1: addressLine1 ?? undefined,
+        addressLine2: addressLine2 ?? undefined,
+        city: city ?? undefined,
+        state: state ?? undefined,
+        postalCode: postalCode ?? undefined,
+        country: country ?? undefined,
+        notes: notes ?? undefined,
+        ...(typeof isActive === "boolean" ? { isActive } : {}),
+        // don’t change organizationId here
       },
     });
 
@@ -143,12 +152,16 @@ export async function PATCH(
         company: updated.company ?? "",
         email: updated.email ?? "",
         phone: updated.phone ?? "",
-        address: updated.addressLine1 ?? "",
+        businessPhone: updated.businessPhone ?? "",
+        mobilePhone: updated.mobilePhone ?? "",
+        addressLine1: updated.addressLine1 ?? "",
+        addressLine2: updated.addressLine2 ?? "",
         city: updated.city ?? "",
         state: updated.state ?? "",
-        postal_code: updated.postalCode ?? "",
+        postalCode: updated.postalCode ?? "",
         country: updated.country ?? "",
         currency: "USD",
+        notes: updated.notes ?? "",
       },
     });
   } catch (err: any) {

@@ -1,10 +1,11 @@
 // app/api/payments/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getActiveOrganizationId } from '@/lib/org';
 
-function getOrgId() {
-  return process.env.DEFAULT_ORG_ID || "demo-org";
-}
+// function getOrgId() {
+//   return process.env.DEFAULT_ORG_ID || "demo-org";
+// }
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const pageSize = parseInt(searchParams.get("pageSize") || "30", 10);
     const q = searchParams.get("q")?.trim() || "";
-    const organizationId = getOrgId();
+    // const organizationId = getOrgId();
+    const organizationId = await getActiveOrganizationId();
 
     const where: any = { organizationId };
 
@@ -117,7 +119,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const organizationId = getOrgId();
+    // const organizationId = getOrgId();
+    const organizationId = await getActiveOrganizationId();
 
     const invoice = await prisma.invoice.findFirst({
       where: { id: invoiceId, organizationId },

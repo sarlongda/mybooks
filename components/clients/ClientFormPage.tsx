@@ -1,3 +1,4 @@
+// components/clients/ClientFormPage.tsx
 import { useState, useEffect } from "react";
 import { ChevronRight, Info } from "lucide-react";
 
@@ -13,11 +14,13 @@ interface FormData {
   company: string;
   email: string;
   phone: string;
+  businessPhone: string;
+  mobilePhone: string;
   addressLine1: string;
   addressLine2: string;
   city: string;
   state: string;
-  postal: string;
+  postalCode: string;
   country: string;
   currency: string;
   notes: string;
@@ -34,16 +37,22 @@ export function ClientFormPage({
     company: "",
     email: "",
     phone: "",
+    businessPhone: "",
+    mobilePhone: "",
     addressLine1: "",
     addressLine2: "",
     city: "",
     state: "",
-    postal: "",
+    postalCode: "",
     country: "",
     currency: "USD",
     notes: "",
   });
+
+  const [showBusinessPhone, setShowBusinessPhone] = useState(false);
+  const [showMobilePhone, setShowMobilePhone] = useState(false);
   const [showAddress, setShowAddress] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,24 +65,7 @@ export function ClientFormPage({
 
   async function fetchClient() {
     try {
-      // const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      // const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      // if (!baseUrl || !anonKey) {
-      //   console.error("Supabase env vars are missing");
-      //   return;
-      // }
-
-      const response = await fetch(
-        // `${baseUrl}/functions/v1/clients/${clientId}`,
-        `/api/clients/${clientId}`
-        // {
-        //   headers: {
-        //     Authorization: `Bearer ${anonKey}`,
-        //     "Content-Type": "application/json",
-        //   },
-        // }
-      );
+      const response = await fetch(`/api/clients/${clientId}`);
       if (!response.ok) {
         throw new Error("Failed to load client");
       }
@@ -84,24 +76,34 @@ export function ClientFormPage({
         const firstName = nameParts[0] || "";
         const lastName = nameParts.slice(1).join(" ") || "";
 
-        setFormData({
+        setFormData((prev) => ({
+          ...prev,
           firstName,
           lastName,
           company: data.client.company || "",
           email: data.client.email || "",
           phone: data.client.phone || "",
-          addressLine1: data.client.address_line1 || "",
-          addressLine2: data.client.address_line2 || "",
+          // if you later add these to the API, they’ll populate here
+          businessPhone: data.client.businessPhone || "",
+          mobilePhone: data.client.mobilePhone || "",
+          addressLine1: data.client.addressLine1 || "",
+          addressLine2: data.client.addressLine2 || "",
           city: data.client.city || "",
           state: data.client.state || "",
-          postal: data.client.postal || "",
+          postalCode: data.client.postalCode || "",
           country: data.client.country || "",
           currency: data.client.currency || "USD",
           notes: data.client.notes || "",
-        });
+        }));
 
-        if (data.client.address_line1) {
+        if (data.client.addressLine1) {
           setShowAddress(true);
+        }
+        if (data.client.businessPhone) {
+          setShowBusinessPhone(true);
+        }
+        if (data.client.mobilePhone) {
+          setShowMobilePhone(true);
         }
       }
     } catch (err) {
@@ -127,41 +129,24 @@ export function ClientFormPage({
         displayName: fullName,
         email: formData.email,
         phone: formData.phone,
+        businessPhone: formData.businessPhone,
+        mobilePhone: formData.mobilePhone,
         company: formData.company,
         addressLine1: formData.addressLine1,
         addressLine2: formData.addressLine2,
         city: formData.city,
         state: formData.state,
-        postal: formData.postal,
+        postalCode: formData.postalCode,
         country: formData.country,
         currency: formData.currency,
         notes: formData.notes,
       };
 
-      // const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      // const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-      // if (!baseUrl || !anonKey) {
-      //   console.error("Supabase env vars are missing");
-      //   setError("Server configuration error");
-      //   setLoading(false);
-      //   return;
-      // }
-
       const url =
-        mode === "create"
-          // ? `${baseUrl}/functions/clients`
-          // : `${baseUrl}/functions/clients/${clientId}`;
-          ? `/api/clients`
-          : `/api/clients/${clientId}`;
-
+        mode === "create" ? `/api/clients` : `/api/clients/${clientId}`;
 
       const response = await fetch(url, {
         method: mode === "create" ? "POST" : "PATCH",
-        // headers: {
-        //   Authorization: `Bearer ${anonKey}`,
-        //   "Content-Type": "application/json",
-        // },
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -185,7 +170,8 @@ export function ClientFormPage({
 
   return (
     <section className="min-h-screen bg-slate-50">
-      <div className="p-8 max-w-7xl mx-auto">
+      <div className="p-8 max-w-[1132px] mx-auto">
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-slate-900">
             {mode === "create" ? "New Client" : "Edit Client"}
@@ -224,8 +210,10 @@ export function ClientFormPage({
           onSubmit={handleSubmit}
           className="grid grid-cols-1 lg:grid-cols-3 gap-8"
         >
+          {/* Left: main form */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white border border-slate-200 rounded-lg p-6 space-y-5">
+              {/* Info banner */}
               <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
                 <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <p className="text-sm text-slate-700">
@@ -234,6 +222,7 @@ export function ClientFormPage({
                 </p>
               </div>
 
+              {/* Name fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -243,10 +232,10 @@ export function ClientFormPage({
                     type="text"
                     value={formData.firstName}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         firstName: e.target.value,
-                      })
+                      }))
                     }
                     className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -259,17 +248,18 @@ export function ClientFormPage({
                     type="text"
                     value={formData.lastName}
                     onChange={(e) =>
-                      setFormData({
-                        ...formData,
+                      setFormData((prev) => ({
+                        ...prev,
                         lastName: e.target.value,
-                      })
+                      }))
                     }
                     className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
-              <div>
+              {/* Company */}
+              <div className="border-b border-slate-300">
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Company Name
                 </label>
@@ -277,29 +267,37 @@ export function ClientFormPage({
                   type="text"
                   value={formData.company}
                   onChange={(e) =>
-                    setFormData({
-                      ...formData,
+                    setFormData((prev) => ({
+                      ...prev,
                       company: e.target.value,
-                    })
+                    }))
                   }
-                  className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mb-6 w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              {/* Email */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
+              {/* Primary phone */}
+              <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Phone Number
@@ -308,29 +306,81 @@ export function ClientFormPage({
                   type="tel"
                   value={formData.phone}
                   onChange={(e) =>
-                    setFormData({ ...formData, phone: e.target.value })
+                    setFormData((prev) => ({
+                      ...prev,
+                      phone: e.target.value,
+                    }))
                   }
                   className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-
-              <div className="pt-2 space-y-2">
-                <button
-                  type="button"
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  + Add Business Phone
-                </button>
-                <br />
-                <button
-                  type="button"
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                >
-                  + Add Mobile Phone
-                </button>
               </div>
 
-              <div className="pt-4">
+              {/* Add Business / Mobile phone links + fields */}
+              <div className="grid grid-cols-2 gap-3">
+              <div>
+                {!showBusinessPhone ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowBusinessPhone(true)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    + Add Business Phone
+                  </button>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Business Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.businessPhone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          businessPhone: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+              <div>
+                {!showMobilePhone ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowMobilePhone(true)}
+                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                  >
+                    + Add Mobile Phone
+                  </button>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      Mobile Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      value={formData.mobilePhone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          mobilePhone: e.target.value,
+                        }))
+                      }
+                      className="w-full border border-slate-300 text-slate-700 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+              </div>
+
+              {/* Address section */}
+              <div className="pt-4 border-t border-slate-300">
                 {!showAddress ? (
                   <button
                     type="button"
@@ -344,69 +394,125 @@ export function ClientFormPage({
                     <h3 className="text-sm font-semibold text-slate-900">
                       Address
                     </h3>
-                    <input
-                      type="text"
-                      placeholder="Street Address"
-                      value={formData.addressLine1}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          addressLine1: e.target.value,
-                        })
-                      }
-                      className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Apartment, suite, etc."
-                      value={formData.addressLine2}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          addressLine2: e.target.value,
-                        })
-                      }
-                      className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+
+                    {/* Country */}
                     <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="City"
-                        value={formData.city}
-                        onChange={(e) =>
-                          setFormData({ ...formData, city: e.target.value })
-                        }
-                        className="border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="State/Province"
-                        value={formData.state}
-                        onChange={(e) =>
-                          setFormData({ ...formData, state: e.target.value })
-                        }
-                        className="border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Postal/Zip Code"
-                        value={formData.postal}
-                        onChange={(e) =>
-                          setFormData({ ...formData, postal: e.target.value })
-                        }
-                        className="border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Country
+                      </label>
                       <input
                         type="text"
                         placeholder="Country"
                         value={formData.country}
                         onChange={(e) =>
-                          setFormData({ ...formData, country: e.target.value })
+                          setFormData((prev) => ({
+                            ...prev,
+                            country: e.target.value,
+                          }))
                         }
-                        className="border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
+                    </div>
+                    </div>
+
+                    {/* Address lines */}
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Address Line 1
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Address Line 1"
+                        value={formData.addressLine1}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            addressLine1: e.target.value,
+                          }))
+                        }
+                        className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                        Address Line 2
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Address Line 2"
+                        value={formData.addressLine2}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            addressLine2: e.target.value,
+                          }))
+                        }
+                        className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* City / State */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="City"
+                          value={formData.city}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              city: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          State/Province
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="State"
+                          value={formData.state}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              state: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* PostalCode */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                          ZIP / Postal Code
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="ZIP Code"
+                          value={formData.postalCode}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              postalCode: e.target.value,
+                            }))
+                          }
+                          className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -414,6 +520,7 @@ export function ClientFormPage({
             </div>
           </div>
 
+          {/* Right: Client settings column */}
           <div className="space-y-6">
             <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-200">

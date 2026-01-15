@@ -1,3 +1,4 @@
+// components/clients/ClientDetailPage.tsx
 import { useState, useEffect } from "react";
 import { ClientDetailResponse } from "@/lib/types/clients";
 import { formatCurrency } from "@/lib/utils/formatters";
@@ -48,6 +49,12 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showOverdueTooltip, setShowOverdueTooltip] = useState(false);
 
+  // relationship state
+  const [relationshipDraft, setRelationshipDraft] = useState("");
+  const [isEditingRelationship, setIsEditingRelationship] = useState(false);
+  const [savingRelationship, setSavingRelationship] = useState(false);
+  const [relationshipError, setRelationshipError] = useState("");
+
   useEffect(() => {
     fetchClient();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,6 +85,12 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
 
       const result: ClientDetailResponse = await response.json();
       setData(result);
+
+      // initialise relationship notes from API
+      const apiNotes = (result.client as any)?.notes ?? "";
+      setRelationshipDraft(apiNotes || "");
+      setRelationshipError("");
+      setIsEditingRelationship(false);
     } catch (error) {
       console.error("Error fetching client:", error);
     } finally {
@@ -136,6 +149,52 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
     fetchClient();
   }
 
+
+  // save relationship notes → PATCH /api/clients/:id with { notes }
+  async function handleSaveRelationship() {
+    if (!data) return;
+    try {
+      setSavingRelationship(true);
+      setRelationshipError("");
+
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ notes: relationshipDraft }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to save relationship notes");
+      }
+
+      const result = await res.json();
+
+      // keep local client in sync
+      setData((prev) =>
+        prev
+          ? ({
+            ...prev,
+            client: {
+              ...(prev.client as any),
+              ...(result.client || {}),
+            },
+          } as any)
+          : prev
+      );
+
+      setIsEditingRelationship(false);
+    } catch (err: any) {
+      console.error("Save relationship error", err);
+      setRelationshipError(
+        err?.message || "Failed to save relationship notes"
+      );
+    } finally {
+      setSavingRelationship(false);
+    }
+  }
+
   if (loading || !data) {
     return (
       <section className="space-y-4 p-6">
@@ -170,22 +229,23 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
     [];
 
   // Normalize client address fields (Bolt vs new API)
-  const clientAddress =
-    (client as any).address ??
-    (client as any).address_line1 ??
+  const clientAddressLine1 =
+    (client as any).addressLine1 ??
+    "";
+  const clientAddressLine2 =
+    (client as any).addressLine2 ??
     "";
   const clientCity = (client as any).city ?? "";
   const clientState = (client as any).state ?? "";
   const clientPostalCode =
-    (client as any).postal_code ??
-    (client as any).postal ??
+    (client as any).postalCode ??
     "";
   const clientCountry = (client as any).country ?? "";
   const clientCurrency = (client as any).currency ?? "USD";
 
   return (
     <section className="min-h-screen bg-slate-50">
-      <div className="space-y-4 p-8 max-w-[1400px] mx-auto">
+      <div className="space-y-4 p-8 max-w-[1132px] mx-auto">
         <div className="flex items-center gap-2">
           <button
             onClick={() => onNavigate("clients")}
@@ -301,21 +361,19 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
         <div className="flex gap-3">
           <button
             onClick={() => setMainTab("overview")}
-            className={`px-6 py-2 text-sm font-semibold rounded-full transition-colors ${
-              mainTab === "overview"
-                ? "text-white bg-blue-600"
-                : "text-slate-700 bg-white hover:bg-slate-100"
-            }`}
+            className={`px-6 py-2 text-sm font-semibold rounded-full transition-colors ${mainTab === "overview"
+              ? "text-white bg-blue-600"
+              : "text-slate-700 bg-white hover:bg-slate-100"
+              }`}
           >
             Overview
           </button>
           <button
             onClick={() => setMainTab("relationship")}
-            className={`px-6 py-2 text-sm font-semibold rounded-full transition-colors ${
-              mainTab === "relationship"
-                ? "text-white bg-blue-600"
-                : "text-slate-700 bg-white hover:bg-slate-100"
-            }`}
+            className={`px-6 py-2 text-sm font-semibold rounded-full transition-colors ${mainTab === "relationship"
+              ? "text-white bg-blue-600"
+              : "text-slate-700 bg-white hover:bg-slate-100"
+              }`}
           >
             Relationship
           </button>
@@ -326,7 +384,7 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-6">
                 <div className="bg-white border border-slate-200 rounded-lg p-6">
-                  <div className="flex items-start gap-4 mb-6">
+                  <div className="flex items-start gap-4">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 border-4 border-indigo-100">
                       {getInitials(client.name)}
                     </div>
@@ -346,11 +404,24 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                           <span>{client.phone}</span>
                         </div>
                       )}
-                      {(clientAddress || clientCity || clientPostalCode) && (
+                      {client.mobilePhone && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
+                          <Phone className="w-4 h-4 flex-shrink-0" />
+                          <span>Mobile: {client.mobilePhone}</span>
+                        </div>
+                      )}
+                      {client.businessPhone && (
+                        <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
+                          <Phone className="w-4 h-4 flex-shrink-0" />
+                          <span>Business: {client.businessPhone}</span>
+                        </div>
+                      )}
+                      {(clientAddressLine1 || clientAddressLine2 || clientCity || clientPostalCode) && (
                         <div className="flex items-start gap-2 text-sm text-slate-600">
                           <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                           <div>
-                            {clientAddress && <div>{clientAddress}</div>}
+                            {clientAddressLine1 && <div>{clientAddressLine1}</div>}
+                            {clientAddressLine2 && <div>{clientAddressLine2}</div>}
                             <div>
                               {clientCity && `${clientCity}, `}
                               {clientState} {clientPostalCode}
@@ -363,7 +434,7 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                   </div>
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-lg p-6">
+                {/* <div className="bg-white border border-slate-200 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-slate-900">
                       Payment Options
@@ -372,7 +443,7 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                       <Plus className="w-5 h-5" />
                     </button>
                   </div>
-                </div>
+                </div> */}
               </div>
 
               <div className="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-6">
@@ -487,11 +558,10 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                     <button
                       key={tab.id}
                       onClick={() => setSubTab(tab.id)}
-                      className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-                        subTab === tab.id
-                          ? "text-blue-600 border-b-2 border-blue-600"
-                          : "text-slate-600 hover:text-slate-900"
-                      }`}
+                      className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${subTab === tab.id
+                        ? "text-blue-600 border-b-2 border-blue-600"
+                        : "text-slate-600 hover:text-slate-900"
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -572,15 +642,15 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                                   <div className="text-slate-900 font-medium">
                                     {invoice.issueDate
                                       ? new Date(
-                                          invoice.issueDate
-                                        ).toLocaleDateString()
+                                        invoice.issueDate
+                                      ).toLocaleDateString()
                                       : "—"}
                                   </div>
                                   <div className="text-xs text-slate-500 mt-0.5">
                                     {invoice.dueDate
                                       ? `Due ${new Date(
-                                          invoice.dueDate
-                                        ).toLocaleDateString()}`
+                                        invoice.dueDate
+                                      ).toLocaleDateString()}`
                                       : "No due date"}
                                   </div>
                                 </td>
@@ -593,13 +663,12 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
                                   </div>
                                   <div>
                                     <span
-                                      className={`inline-block px-2.5 py-1 text-xs font-semibold rounded ${
-                                        invoice.status === "PAID"
-                                          ? "bg-green-100 text-green-700"
-                                          : invoice.status === "OVERDUE"
+                                      className={`inline-block px-2.5 py-1 text-xs font-semibold rounded ${invoice.status === "PAID"
+                                        ? "bg-green-100 text-green-700"
+                                        : invoice.status === "OVERDUE"
                                           ? "bg-red-100 text-red-700"
                                           : "bg-yellow-100 text-yellow-700"
-                                      }`}
+                                        }`}
                                     >
                                       {invoice.status === "SENT"
                                         ? "Viewed"
@@ -654,11 +723,72 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
           </div>
         )}
 
+        {/* RELATIONSHIP TAB */}
         {mainTab === "relationship" && (
           <div className="bg-white border border-slate-200 rounded-lg p-6">
-            <div className="text-center py-12 text-slate-500">
-              Relationship information coming soon
-            </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">
+              Relationship
+            </h2>
+
+            {relationshipError && (
+              <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {relationshipError}
+              </div>
+            )}
+
+            {!isEditingRelationship ? (
+              <button
+                type="button"
+                onClick={() => setIsEditingRelationship(true)}
+                className="w-full text-left border border-dashed border-slate-300 rounded-md px-3 py-2 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {relationshipDraft ? (
+                  <div className="flex items-center gap-2 text-slate-800">
+                    <span>{relationshipDraft}</span>
+                    <Edit className="w-4 h-4 text-slate-400" />
+                  </div>
+                ) : (
+                  <span className="text-slate-400 text-sm">
+                    Add notes here (they will not be visible to your client).
+                  </span>
+                )}
+              </button>
+            ) : (
+              <div>
+                <textarea
+                  value={relationshipDraft}
+                  onChange={(e) => setRelationshipDraft(e.target.value)}
+                  rows={3}
+                  autoFocus
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Add notes here (they will not be visible to your client)."
+                />
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveRelationship}
+                    disabled={savingRelationship}
+                    className="px-4 py-1.5 text-sm font-semibold rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {savingRelationship ? "Saving..." : "Save"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // reset to last saved value from data
+                      const currentNotes =
+                        ((data.client as any)?.notes as string) ?? "";
+                      setRelationshipDraft(currentNotes);
+                      setIsEditingRelationship(false);
+                    }}
+                    disabled={savingRelationship}
+                    className="px-3 py-1.5 text-sm rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -670,7 +800,7 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
         clientId={clientId}
         clientName={client.name}
         clientEmail={client.email}
-        clientAddress={clientAddress}
+        clientAddress={clientAddressLine1}
         clientCity={clientCity}
         clientState={clientState}
         clientPostalCode={clientPostalCode}

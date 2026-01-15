@@ -41,11 +41,11 @@ async function getOrganizationId(req: NextRequest): Promise<string> {
 // ---------- GET /api/invoices/:invoiceId ----------
 export async function GET(
   req: NextRequest,
-  { params }: { params: { invoiceId: string } }
+  { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
     const organizationId = await getOrganizationId(req);
-    const { invoiceId } = params;
+    const { invoiceId } = await params;
 
     const invoice = await prisma.invoice.findFirst({
       where: {
@@ -119,11 +119,11 @@ export async function GET(
 // ---------- PATCH /api/invoices/:invoiceId ----------
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { invoiceId: string } }
+  { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
     const organizationId = await getOrganizationId(req);
-    const { invoiceId } = params;
+    const { invoiceId } = await params;
     const body = (await req.json()) as InvoicePayload;
 
     const existing = await prisma.invoice.findFirst({
@@ -190,11 +190,11 @@ export async function PATCH(
 // ---------- DELETE /api/invoices/:invoiceId ----------
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { invoiceId: string } }
+  { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
     const organizationId = await getOrganizationId(req);
-    const { invoiceId } = params;
+    const { invoiceId } = await params;
 
     const existing = await prisma.invoice.findFirst({
       where: { id: invoiceId, organizationId },
