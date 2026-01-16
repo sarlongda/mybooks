@@ -64,17 +64,17 @@ export function ClientDetailPage({ clientId, onNavigate }: ClientDetailPageProps
     try {
       setLoading(true);
 
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      // const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      // const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!baseUrl || !anonKey) {
-        console.error("Supabase env vars are missing");
-        return;
-      }
+      // if (!baseUrl || !anonKey) {
+      //   console.error("Supabase env vars are missing");
+      //   return;
+      // }
 
       const response = await fetch(`/api/clients/${clientId}`, {
         headers: {
-          Authorization: `Bearer ${anonKey}`,
+          // Authorization: `Bearer ${anonKey}`,
           "Content-Type": "application/json",
         },
       });

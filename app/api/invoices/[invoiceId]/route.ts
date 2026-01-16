@@ -1,6 +1,7 @@
 // app/api/invoices/[invoiceId]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getActiveOrganizationId } from '@/lib/org';
 
 type InvoicePayload = {
   clientId: string;
@@ -26,25 +27,13 @@ type InvoicePayload = {
   }>;
 };
 
-async function getOrganizationId(req: NextRequest): Promise<string> {
-  const fromHeader = req.headers.get('x-organization-id');
-  if (fromHeader) return fromHeader;
-
-  const fromEnv = process.env.DEV_ORG_ID;
-  if (fromEnv) return fromEnv;
-
-  const org = await prisma.organization.findFirst();
-  if (!org) throw new Error('No organizations found. Seed at least one Organization.');
-  return org.id;
-}
-
 // ---------- GET /api/invoices/:invoiceId ----------
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
-    const organizationId = await getOrganizationId(req);
+    const organizationId = await getActiveOrganizationId();
     const { invoiceId } = await params;
 
     const invoice = await prisma.invoice.findFirst({
@@ -122,7 +111,7 @@ export async function PATCH(
   { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
-    const organizationId = await getOrganizationId(req);
+    const organizationId = await getActiveOrganizationId();
     const { invoiceId } = await params;
     const body = (await req.json()) as InvoicePayload;
 
@@ -193,7 +182,7 @@ export async function DELETE(
   { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
-    const organizationId = await getOrganizationId(req);
+    const organizationId = await getActiveOrganizationId();
     const { invoiceId } = await params;
 
     const existing = await prisma.invoice.findFirst({

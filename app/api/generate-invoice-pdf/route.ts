@@ -1,13 +1,21 @@
+// app/api/generate-invoice-pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import { getActiveOrganizationId } from "@/lib/org";
 
 export const runtime = "nodejs";
-// For now we use a fixed org; later replace with real auth/org logic.
-const DEFAULT_ORG_ID = process.env.DEFAULT_ORG_ID;
 
 export async function GET(req: NextRequest) {
   try {
+    // � get the active business (organization) for the logged-in user
+    let organizationId: string;
+    try {
+      organizationId = await getActiveOrganizationId();
+    } catch {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const invoiceId = searchParams.get("invoiceId");
 
@@ -21,7 +29,7 @@ export async function GET(req: NextRequest) {
     const invoice = await prisma.invoice.findFirst({
       where: {
         id: invoiceId,
-        organizationId: DEFAULT_ORG_ID,
+        organizationId, // scoped to active business
       },
       include: {
         client: true,
@@ -36,7 +44,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // --- Build a very simple PDF (Phase 1) ---
+    // --- Build a very simple PDF ---
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     const { width, height } = page.getSize();
@@ -83,10 +91,7 @@ export async function GET(req: NextRequest) {
       const rate = Number(li.unitPrice || 0).toFixed(2);
       const total = Number(li.lineTotal || 0).toFixed(2);
 
-      draw(
-        `- ${li.description || ""}  x${qty} @ ${rate} = ${total}`,
-        60
-      );
+      draw(`- ${li.description || ""}  x${qty} @ ${rate} = ${total}`, 60);
     }
 
     y -= 10;

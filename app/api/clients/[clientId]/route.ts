@@ -1,21 +1,25 @@
 // app/api/clients/[clientId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-const DEMO_ORG_ID = process.env.DEMO_ORG_ID;
+import { getActiveOrganizationId } from '@/lib/org';
 
 // GET /api/clients/:clientId → used by detail + edit pages
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ clientId: string }> }
 ) {
   const { clientId } = await params;
 
   try {
+    const organizationId = await getActiveOrganizationId();
+    if (!organizationId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const client = await prisma.client.findFirst({
       where: {
         id: clientId,
-        organizationId: DEMO_ORG_ID,
+        organizationId, // � scoped to this business
       },
     });
 
@@ -29,7 +33,7 @@ export async function GET(
     const invoices = await prisma.invoice.findMany({
       where: {
         clientId,
-        organizationId: DEMO_ORG_ID,
+        organizationId, // � same org
       },
       orderBy: { issueDate: "desc" },
     });
@@ -43,11 +47,11 @@ export async function GET(
     );
 
     const openAmount = openInvoices.reduce(
-      (sum, inv) => sum + Number(inv.total),
+      (sum, inv) => sum + Number(inv.total ?? 0),
       0
     );
     const overdueAmount = overdueInvoices.reduce(
-      (sum, inv) => sum + Number(inv.total),
+      (sum, inv) => sum + Number(inv.total ?? 0),
       0
     );
 
@@ -67,11 +71,9 @@ export async function GET(
         postalCode: client.postalCode ?? "",
         country: client.country ?? "",
         currency: "USD",
-        // you don’t have notes in the DB yet, so just send empty
         notes: client.notes ?? "",
       },
       summary: {
-        // match what ClientDetailPage expects
         outstandingBalance: openAmount,
         overdueBalance: overdueAmount,
       },
@@ -81,7 +83,7 @@ export async function GET(
         status: inv.status,
         issueDate: inv.issueDate,
         dueDate: inv.dueDate,
-        total: Number(inv.total),
+        total: Number(inv.total ?? 0),
         currency: inv.currency ?? "USD",
         notes: inv.notes ?? "",
       })),
@@ -103,6 +105,11 @@ export async function PATCH(
   const { clientId } = await params;
 
   try {
+    const organizationId = await getActiveOrganizationId();
+    if (!organizationId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
 
     const {
@@ -122,9 +129,13 @@ export async function PATCH(
       isActive,
     } = body;
 
+    // Only update client belonging to this org
     const updated = await prisma.client.update({
       where: {
+        // Composite unique index is ideal, but if you only have `id`:
         id: clientId,
+        // If you’ve added a unique idx on (id, organizationId),
+        // you can use: { id_organizationId: { id: clientId, organizationId } }
       },
       data: {
         displayName: displayName ?? undefined,
@@ -141,9 +152,16 @@ export async function PATCH(
         country: country ?? undefined,
         notes: notes ?? undefined,
         ...(typeof isActive === "boolean" ? { isActive } : {}),
-        // don’t change organizationId here
       },
     });
+
+    // Optionally: verify org matches (extra safety)
+    if (updated.organizationId !== organizationId) {
+      return NextResponse.json(
+        { error: "Client not found in this organization" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       client: {
@@ -167,7 +185,10 @@ export async function PATCH(
   } catch (err: any) {
     console.error("PATCH /api/clients/[clientId] error", err);
     return NextResponse.json(
-      { error: "Failed to update client", details: String(err?.message ?? err) },
+      {
+        error: "Failed to update client",
+        details: String(err?.message ?? err),
+      },
       { status: 500 }
     );
   }

@@ -11,6 +11,8 @@ import {
   Archive,
   Trash2,
   Plus,
+  Download,
+  Upload,
 } from "lucide-react";
 
 interface ClientsListPageProps {
@@ -29,6 +31,7 @@ export function ClientsListPage({ onNavigate }: ClientsListPageProps) {
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [metricFilter, setMetricFilter] = useState<MetricFilter>("all");
   const [showMoreActions, setShowMoreActions] = useState(false);
+  const [recentlyActiveColors, setRecentlyActiveColors] = useState<number[]>([]);
 
   // hidden input for CSV import
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -49,17 +52,17 @@ export function ClientsListPage({ onNavigate }: ClientsListPageProps) {
         params.append("q", searchQuery);
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      // const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      // const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-      if (!baseUrl || !anonKey) {
-        console.error("Supabase env vars are missing");
-        return;
-      }
+      // if (!baseUrl || !anonKey) {
+      //   console.error("Supabase env vars are missing");
+      //   return;
+      // }
 
       const response = await fetch(`/api/clients?${params.toString()}`, {
         headers: {
-          Authorization: `Bearer ${anonKey}`,
+          // Authorization: `Bearer ${anonKey}`,
           "Content-Type": "application/json",
         },
       });
@@ -99,6 +102,24 @@ export function ClientsListPage({ onNavigate }: ClientsListPageProps) {
     ) || 0;
 
   const recentlyActive = items.slice(0, 3);
+
+  // Generate stable random colors for recently active cards
+  useEffect(() => {
+    if (recentlyActive.length > 0) {
+      // Generate unique random indices for each card
+      const indices: number[] = [];
+      const availableColors = Array.from({ length: avatarColors.length }, (_, i) => i);
+      
+      for (let i = 0; i < Math.min(recentlyActive.length, avatarColors.length); i++) {
+        const randomIndex = Math.floor(Math.random() * availableColors.length);
+        indices.push(availableColors[randomIndex]);
+        availableColors.splice(randomIndex, 1);
+      }
+      
+      setRecentlyActiveColors(indices);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentlyActive.length]);
 
   function getInitials(name: string): string {
     const parts = name.split(" ");
@@ -342,21 +363,28 @@ export function ClientsListPage({ onNavigate }: ClientsListPageProps) {
                     <button
                       type="button"
                       onClick={handleImportClick}
-                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <Upload className="w-4 h-4 text-slate-600" strokeWidth={2} />
+                      </div>
                       Import Clients
                     </button>
                     <button
                       type="button"
                       onClick={handleExportClients}
-                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
                     >
+                      <div className="w-6 h-6 flex items-center justify-center">
+                        <Download className="w-4 h-4 text-slate-600" strokeWidth={2} />
+                      </div>
                       Export Clients
                     </button>
                   </div>
                 </>
               )}
             </div>
+
             <button
               onClick={() => onNavigate("clients-new")}
               className="px-5 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors"
@@ -438,17 +466,21 @@ export function ClientsListPage({ onNavigate }: ClientsListPageProps) {
               {recentlyActive.map((client, index) => (
                 <div
                   key={client.id}
-                  className={`bg-white border border-slate-200 border-t-4 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer ${getBorderColor(
-                    index
-                  )}`}
+                  className={`bg-white border border-slate-200 border-t-4 rounded-lg p-5 hover:shadow-md transition-shadow cursor-pointer ${
+                    recentlyActiveColors[index] !== undefined 
+                      ? getBorderColor(recentlyActiveColors[index])
+                      : getBorderColor(index)
+                  }`}
                   onClick={() => onNavigate(`client-detail-${client.id}`)}
                 >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-start gap-3">
                       <div
-                        className={`w-12 h-12 rounded-full border-2 ${getAvatarBorderColor(
-                          index
-                        )} bg-white flex items-center justify-center font-semibold text-sm text-slate-900`}
+                        className={`w-12 h-12 rounded-full border-2 ${
+                          recentlyActiveColors[index] !== undefined
+                            ? getAvatarBorderColor(recentlyActiveColors[index])
+                            : getAvatarBorderColor(index)
+                        } bg-white flex items-center justify-center font-semibold text-sm text-slate-900`}
                       >
                         {getInitials(client.name)}
                       </div>

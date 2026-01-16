@@ -1,17 +1,7 @@
 // app/api/clients/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// Helper: pick an organization to use (dev only)
-async function getOrganizationId() {
-  if (process.env.DEMO_ORG_ID) return process.env.DEMO_ORG_ID;
-
-  const org = await prisma.organization.findFirst({
-    orderBy: { createdAt: "asc" },
-  });
-
-  return org?.id ?? null;
-}
+import { getActiveOrganizationId } from "@/lib/org";
 
 // GET /api/clients  (list)
 export async function GET(req: NextRequest) {
@@ -22,17 +12,12 @@ export async function GET(req: NextRequest) {
     const pageSize = Number(searchParams.get("pageSize") || "30");
     const q = searchParams.get("q") ?? "";
 
-    const organizationId = await getOrganizationId();
+    // � use real org from auth, not DEMO_ORG_ID / first org
+    const organizationId = await getActiveOrganizationId();
     if (!organizationId) {
       return NextResponse.json(
-        {
-          items: [],
-          page,
-          pageSize,
-          totalItems: 0,
-          totalPages: 0,
-        },
-        { status: 200 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
@@ -58,7 +43,7 @@ export async function GET(req: NextRequest) {
 
     const clientIds = clients.map((c) => c.id);
 
-    // � Per-client metrics: outstanding, overdue, draft
+    // Per-client metrics: outstanding, overdue, draft
     const perClient: Record<
       string,
       { outstanding: number; overdue: number; draft: number }
@@ -158,14 +143,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/clients  (create) – unchanged except for context
+// POST /api/clients  (create)
 export async function POST(req: NextRequest) {
   try {
-    const organizationId = await getOrganizationId();
+    const organizationId = await getActiveOrganizationId();
     if (!organizationId) {
       return NextResponse.json(
-        { error: "No organization found to attach client to" },
-        { status: 400 }
+        { error: "Unauthorized" },
+        { status: 401 }
       );
     }
 

@@ -1,6 +1,7 @@
 // app/api/invoices/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getActiveOrganizationId } from '@/lib/org';
 
 type InvoicePayload = {
   clientId: string;
@@ -25,26 +26,10 @@ type InvoicePayload = {
   }>;
 };
 
-// For now, read org id from header or env
-async function getOrganizationId(req: NextRequest): Promise<string> {
-  const fromHeader = req.headers.get('x-organization-id');
-  if (fromHeader) return fromHeader;
-
-  const fromEnv = process.env.DEV_ORG_ID;
-  if (fromEnv) return fromEnv;
-
-  // fallback: first org in DB (dev only)
-  const org = await prisma.organization.findFirst();
-  if (!org) {
-    throw new Error('No organizations found. Seed at least one Organization.');
-  }
-  return org.id;
-}
-
 // ---------- GET /api/invoices (list) ----------
 export async function GET(req: NextRequest) {
   try {
-    const organizationId = await getOrganizationId(req);
+    const organizationId = await getActiveOrganizationId();
     const { searchParams } = new URL(req.url);
 
     const page = Number(searchParams.get('page') || '1');
@@ -112,7 +97,7 @@ export async function GET(req: NextRequest) {
 // ---------- POST /api/invoices (create) ----------
 export async function POST(req: NextRequest) {
   try {
-    const organizationId = await getOrganizationId(req);
+    const organizationId = await getActiveOrganizationId();
     const body = (await req.json()) as InvoicePayload;
 
     if (!body.clientId) {

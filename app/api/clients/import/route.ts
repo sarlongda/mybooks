@@ -1,17 +1,7 @@
 // app/api/clients/import/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// Same helper as in app/api/clients/route.ts
-async function getOrganizationId() {
-    if (process.env.DEMO_ORG_ID) return process.env.DEMO_ORG_ID;
-
-    const org = await prisma.organization.findFirst({
-        orderBy: { createdAt: "asc" },
-    });
-
-    return org?.id ?? null;
-}
+import { getActiveOrganizationId } from '@/lib/org';
 
 type CsvRow = Record<string, string>;
 
@@ -77,7 +67,7 @@ function normalizePhone(raw: string): string {
 
 export async function POST(req: NextRequest) {
     try {
-        const organizationId = await getOrganizationId();
+        const organizationId = await getActiveOrganizationId();
         if (!organizationId) {
             return NextResponse.json(
                 { error: "No organization found to attach client to" },

@@ -38,10 +38,10 @@ function MenuItem({
 }: MenuItemProps) {
   const content = (
     <div
-      className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors ${
+      className={`w-full flex items-center justify-between px-4 py-2.5 mb-1 rounded-md text-sm transition-colors ${
         active
-          ? "bg-blue-700 text-white"
-          : "text-blue-100 hover:bg-blue-700 hover:text-white"
+          ? "bg-blue-800 text-white"
+          : "text-blue-50 hover:bg-blue-700 hover:text-white"
       }`}
     >
       <div className="flex items-center gap-3">
@@ -87,7 +87,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-blue-600 to-blue-700 h-full flex flex-col">
+    <aside className="w-64 bg-blue-600 h-full flex flex-col">
       {/* Business selector – static for now, later we’ll hook it to real business switching */}
       {/* <div className="p-4 border-b border-blue-500">
         <div className="flex items-center gap-2 text-white cursor-pointer">
@@ -101,7 +101,7 @@ export function Sidebar() {
       </div> */}
       <OrganizationSwitcher />
 
-      <nav className="flex-1 py-2">
+      <nav className="py-2 px-2">
         <MenuItem
           icon={<LayoutDashboard />}
           label="Dashboard"
@@ -146,7 +146,7 @@ export function Sidebar() {
         />
       </nav>
 
-      <div className="border-t border-blue-500 py-2">
+      <div className="border-t border-blue-500 py-2 px-2">
         <div className="px-4 py-2 text-xs font-semibold text-blue-200 uppercase tracking-wider">
           More
         </div>

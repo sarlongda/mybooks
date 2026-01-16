@@ -1,17 +1,7 @@
 // app/api/clients/export/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// Same helper as in app/api/clients/route.ts
-async function getOrganizationId() {
-  if (process.env.DEMO_ORG_ID) return process.env.DEMO_ORG_ID;
-
-  const org = await prisma.organization.findFirst({
-    orderBy: { createdAt: "asc" },
-  });
-
-  return org?.id ?? null;
-}
+import { getActiveOrganizationId } from '@/lib/org';
 
 function escapeCsv(value: string | null | undefined): string {
   const v = value ?? "";
@@ -23,7 +13,7 @@ function escapeCsv(value: string | null | undefined): string {
 
 export async function GET() {
   try {
-    const organizationId = await getOrganizationId();
+    const organizationId = await getActiveOrganizationId();
     if (!organizationId) {
       return NextResponse.json(
         { error: "No organization found" },

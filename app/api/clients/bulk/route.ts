@@ -1,22 +1,12 @@
 // app/api/clients/bulk/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-// same helper pattern as /api/clients
-async function getOrganizationId() {
-  if (process.env.DEMO_ORG_ID) return process.env.DEMO_ORG_ID;
-
-  const org = await prisma.organization.findFirst({
-    orderBy: { createdAt: "asc" },
-  });
-
-  return org?.id ?? null;
-}
+import { getActiveOrganizationId } from '@/lib/org';
 
 // POST /api/clients/bulk  { action: "archive" | "delete", ids: string[] }
 export async function POST(req: NextRequest) {
   try {
-    const organizationId = await getOrganizationId();
+    const organizationId = await getActiveOrganizationId();
     if (!organizationId) {
       return NextResponse.json(
         { error: "No organization found" },
